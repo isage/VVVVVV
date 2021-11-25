@@ -23,6 +23,10 @@
 #include "SoundSystem.h"
 #include "UtilityClass.h"
 
+#if defined(__vita__)
+int _newlib_heap_size_user   = 300 * 1024 * 1024;
+#endif
+
 scriptclass script;
 
 #if !defined(NO_CUSTOM_LEVELS)

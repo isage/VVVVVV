@@ -1350,7 +1350,11 @@ void titlerender(void)
 #endif
 
         graphics.Print(5, 175, "[ Press ACTION to Start ]", tr, tg, tb, true);
+#if defined(__vita__)
+        graphics.Print(5, 195, "ACTION = X", int(tr*0.5f), int(tg*0.5f), int(tb*0.5f), true);
+#else
         graphics.Print(5, 195, "ACTION = Space, Z, or V", int(tr*0.5f), int(tg*0.5f), int(tb*0.5f), true);
+#endif
     }
     else
     {
@@ -1574,11 +1578,19 @@ static const char* interact_prompt(
 
     if (game.separate_interact)
     {
+#if defined(__vita__)
+        button = "TRIANGLE";
+#else
         button = "E";
+#endif
     }
     else
     {
+#if defined(__vita__)
+        button = "TRIANGLE";
+#else
         button = "ENTER";
+#endif
     }
 
     SDL_snprintf(buffer, buffer_size, raw, button);
@@ -1774,8 +1786,11 @@ void gamerender(void)
                     graphics.bigbprint( -1, 200, "New Trophy!", 220 - (help.glow), 128 - (help.glow), 128 - (help.glow / 2), true, 2);
                 }
             }
-
+#if defined(__vita__)
+            graphics.bprint( 20, 228, "[Press TRIANGLE to stop]", 160 - (help.glow/2), 160 - (help.glow/2), 160 - (help.glow/2), true);
+#else
             graphics.bprint( 20, 228, "[Press ENTER to stop]", 160 - (help.glow/2), 160 - (help.glow/2), 160 - (help.glow/2), true);
+#endif
         }
         else if(game.swngame==2)
         {

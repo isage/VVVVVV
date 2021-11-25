@@ -9,7 +9,11 @@ option(ENABLE_WERROR "Treat compilation warnings as errors" OFF)
 
 option(BUNDLE_DEPENDENCIES "Use bundled TinyXML-2, PhysicsFS, and UTF8-CPP (if disabled, TinyXML-2 and PhysicsFS will be dynamically linked, LodePNG and UTF8-CPP will still be statically linked)" ON)
 
+if(VITA)
+set(CUSTOM_LEVEL_SUPPORT NO_EDITOR CACHE STRING "Optionally disable playing and/or editing of custom levels")
+else()
 set(CUSTOM_LEVEL_SUPPORT ENABLED CACHE STRING "Optionally disable playing and/or editing of custom levels")
+endif()
 set_property(CACHE CUSTOM_LEVEL_SUPPORT PROPERTY STRINGS ENABLED NO_EDITOR DISABLED)
 
 option(STEAM "Use the Steam API" OFF)
@@ -131,14 +135,24 @@ endif()
 
 # Include Directories
 if(BUNDLE_DEPENDENCIES)
-	target_include_directories(
-		VVVVVV PRIVATE
-		src
-		../third_party/tinyxml2
-		../third_party/physfs
-		../third_party/lodepng
-		../third_party/utfcpp/source
-	)
+	if(NOT VITA)
+		target_include_directories(
+			VVVVVV PRIVATE
+			src
+			../third_party/tinyxml2
+			../third_party/physfs
+			../third_party/lodepng
+			../third_party/utfcpp/source
+		)
+	else()
+		target_include_directories(
+			VVVVVV PRIVATE
+			src
+			../third_party/tinyxml2
+			../third_party/lodepng
+			../third_party/utfcpp/source
+		)
+	endif()
 else()
 	target_include_directories(
 		VVVVVV PRIVATE
@@ -275,22 +289,27 @@ target_compile_definitions(lodepng-static PRIVATE
 	-DLODEPNG_NO_COMPILE_ALLOCATORS
 	-DLODEPNG_NO_COMPILE_DISK
 	-DLODEPNG_NO_COMPILE_ENCODER
+	-DLODEPNG_NO_COMPILE_CPP
 )
 
 if(BUNDLE_DEPENDENCIES)
 	add_library(tinyxml2-static STATIC ${XML2_SRC})
-	add_library(physfs-static STATIC ${PFS_SRC})
-	target_compile_definitions(physfs-static PRIVATE
-		-DPHYSFS_SUPPORTS_DEFAULT=0 -DPHYSFS_SUPPORTS_ZIP=1
-	)
+	if(NOT VITA)
+		add_library(physfs-static STATIC ${PFS_SRC})
+		target_compile_definitions(physfs-static PRIVATE
+			-DPHYSFS_SUPPORTS_DEFAULT=0 -DPHYSFS_SUPPORTS_ZIP=1
+		)
 
-	# PhysFS needs some extensions...
-	if(${CMAKE_VERSION} VERSION_GREATER "3.1.3"
-	OR ${CMAKE_VERSION} VERSION_EQUAL "3.1.3")
-		set_property(TARGET physfs-static PROPERTY C_EXTENSIONS ON)
+		# PhysFS needs some extensions...
+		if(${CMAKE_VERSION} VERSION_GREATER "3.1.3"
+		OR ${CMAKE_VERSION} VERSION_EQUAL "3.1.3")
+			set_property(TARGET physfs-static PROPERTY C_EXTENSIONS ON)
+		endif()
+
+		target_link_libraries(VVVVVV physfs-static tinyxml2-static lodepng-static)
+	else()
+		target_link_libraries(VVVVVV physfs tinyxml2-static lodepng-static)
 	endif()
-
-	target_link_libraries(VVVVVV physfs-static tinyxml2-static lodepng-static)
 else()
 	find_package(utf8cpp CONFIG)
 
@@ -307,16 +326,50 @@ else()
 	find_package(SDL2 CONFIG)
 	if(TARGET SDL2::SDL2)
 		message(STATUS "Using TARGET SDL2::SDL2")
-		target_link_libraries(VVVVVV SDL2::SDL2 SDL2_mixer)
+		target_link_libraries(VVVVVV SDL2_mixer SDL2::SDL2)
 	elseif(TARGET SDL2)
 		message(STATUS "Using TARGET SDL2")
-		target_link_libraries(VVVVVV SDL2 SDL2_mixer)
+		target_link_libraries(VVVVVV SDL2_mixer SDL2)
 	else()
 		message(STATUS "No TARGET SDL2::SDL2, or SDL2, using variables")
 		find_path(SDL2_MIXER_INCLUDE_DIRS NAMES SDL_mixer.h PATH_SUFFIXES SDL2)
 		target_include_directories(VVVVVV SYSTEM PRIVATE "$<BUILD_INTERFACE:${SDL2_INCLUDE_DIRS}>" ${SDL2_MIXER_INCLUDE_DIRS})
-		target_link_libraries(VVVVVV ${SDL2_LIBRARIES} SDL2_mixer)
+		target_link_libraries(VVVVVV SDL2_mixer ${SDL2_LIBRARIES})
 	endif()
+endif()
+
+if(VITA)
+	add_definitions("-ftree-vectorize -fsigned-char -fno-strict-aliasing -fno-optimize-sibling-calls -fno-partial-inlining")
+
+	target_link_libraries(VVVVVV
+		SceAppUtil_stub
+		FLAC
+		vorbisfile
+		vorbis
+		ogg
+		mikmod
+		mpg123
+		jpeg
+		png
+		webp
+		pthread
+		z
+		m
+	)
+
+	include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
+	set(VITA_APP_NAME "VVVVVV")
+	set(VITA_TITLEID  "VVVVVVITA")
+	set(VITA_VERSION  "01.00")
+	set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d PARENTAL_LEVEL=1 -d ATTRIBUTE2=12")
+
+	vita_create_self(${PROJECT_NAME}.self VVVVVV UNSAFE)
+	vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
+		VERSION ${VITA_VERSION}
+		NAME ${VITA_APP_NAME}
+		FILE platform/vita/sce_sys sce_sys
+		FILE data data
+	)
 endif()
 
 # Yes, more Apple Crap

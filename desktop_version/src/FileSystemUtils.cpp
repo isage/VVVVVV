@@ -13,6 +13,10 @@
 #include "Maths.h"
 #include "UtilityClass.h"
 
+#if defined(__vita__)
+#define PATH_MAX 4096
+#endif
+
 /* These are needed for PLATFORM_* crap */
 #if defined(_WIN32)
 #include <windows.h>
@@ -24,7 +28,7 @@ int mkdir(char* path, int mode)
 	return CreateDirectoryW(utf16_path, NULL);
 }
 #define VNEEDS_MIGRATION (mkdirResult != 0)
-#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__HAIKU__) || defined(__DragonFly__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__HAIKU__) || defined(__DragonFly__) || defined(__vita__)
 #include <unistd.h>
 #include <dirent.h>
 #include <limits.h>
@@ -158,10 +162,16 @@ int FILESYSTEM_init(char *argvZero, char* baseDir, char *assetsPath)
 	}
 	else
 	{
+#if defined(__vita__)
+		SDL_snprintf(output, sizeof(output), "ux0:/data/vvvvvv/%s",
+			"data.zip"
+		);
+#else
 		SDL_snprintf(output, sizeof(output), "%s%s",
 			basePath,
 			"data.zip"
 		);
+#endif
 	}
 	if (!PHYSFS_mount(output, NULL, 1))
 	{
@@ -777,6 +787,8 @@ static int PLATFORM_getOSDirectory(char* output, const size_t output_size)
 	SDL_strlcat(output, "\\VVVVVV\\", MAX_PATH);
 	mkdir(output, 0777);
 	return 1;
+#elif defined(__vita__)
+	SDL_strlcpy(output, "ux0:/data/vvvvvv/", output_size);
 #else
 	const char* prefDir = PHYSFS_getPrefDir("distractionware", "VVVVVV");
 	if (prefDir == NULL)
@@ -905,6 +917,7 @@ static void PLATFORM_migrateSaveData(char* output)
 			PLATFORM_copyFile(oldLocation, newLocation);
 		}
 	} while (FindNextFile(hFind, &findHandle));
+#elif defined(__vita__)
 #else
 #error See PLATFORM_migrateSaveData
 #endif

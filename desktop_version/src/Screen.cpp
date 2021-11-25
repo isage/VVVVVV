@@ -21,10 +21,10 @@ extern "C"
 
 ScreenSettings::ScreenSettings(void)
 {
-	windowWidth = 320;
-	windowHeight = 240;
-	fullscreen = false;
-	useVsync = false;
+	windowWidth = 960;
+	windowHeight = 544;
+	fullscreen = true;
+	useVsync = true;
 	stretch = 0;
 	linearFilter = false;
 	badSignal = false;
@@ -127,7 +127,7 @@ void Screen::GetSettings(ScreenSettings* settings)
 
 void Screen::LoadIcon(void)
 {
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__vita__)
 	unsigned char *fileIn;
 	size_t length;
 	unsigned char *data;
